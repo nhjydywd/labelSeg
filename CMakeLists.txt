@@ -12,12 +12,31 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
+set(OpenCV_DIR C:/Libs/Opencv4/opencv/build/x64/vc15/lib)
+find_package(OpenCV REQUIRED)
+include_directories("C:/Libs/eigen-3.4.0" ${OpenCV_INCLUDE_DIRS})
+
+#execute_process(
+#    COMMAND lupdate mainwindow.ui -ts trans_en.ts trans_ch.ts
+#)
+#execute_process(
+#    COMMAND lrelease trans_en.ts trans_ch.ts
+#)
+
+
 set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
 )
+
+
+#find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+##qt_add_lupdate(labelSeg TS_FILES trans_en.ts SOURCES ${PROJECT_SOURCES})
+#qt_add_translations(labelSeg TS_FILES trans_en.ts QM_FILES_OUTPUT_VARIABLE qm_files)
+
+qt_add_resources(PROJECT_SOURCES resource.qrc)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(labelSeg
@@ -42,7 +61,9 @@ else()
     endif()
 endif()
 
-target_link_libraries(labelSeg PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+
+
+target_link_libraries(labelSeg PRIVATE Qt${QT_VERSION_MAJOR}::Widgets ${OpenCV_LIBS})
 
 set_target_properties(labelSeg PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
@@ -56,6 +77,16 @@ install(TARGETS labelSeg
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+
+
+
+
+
+
+
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(labelSeg)
 endif()
+
+

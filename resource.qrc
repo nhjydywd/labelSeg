@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/translation">
+        <file>trans_ch.qm</file>
+        <file>trans_en.qm</file>
+    </qresource>
+    <qresource prefix="/models">
+        <file>OCTA_FRNet.onnx</file>
+    </qresource>
+</RCC>
