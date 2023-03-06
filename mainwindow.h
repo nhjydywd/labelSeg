@@ -74,6 +74,8 @@ public:
     void onBtnExport();
     void onItemSelectionChanged();
     bool eventFilter(QObject *, QEvent *);
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dropEvent(QDropEvent *event);
     ~MainWindow();
 signals:
     void signalUpdateImageView(bool must=false);

@@ -9,6 +9,7 @@
 #include <QRegularExpression>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QMimeData>
 #include <filesystem>
 #include <map>
 #include <Eigen/Core>
@@ -104,6 +105,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     ui->listWidget->installEventFilter(this);
 
+    this->setAcceptDrops(true);
 //    for(auto c:ui->centralwidget->children()){
 //        c->installEventFilter(this);
 //    }
@@ -428,14 +430,18 @@ void MainWindow::onBtnSave(){
     data_saved_label = data_label;
 }
 
-void moveFile(const QString &path_old,  const QString &path_new){
+void moveFile(const QString &path_old,  const QString &path_new, bool copy = false){
     QFile f_old(path_old);
     QFile f_new(path_new);
     if(!f_old.exists()||!f_old.open(QFile::ReadOnly) || !f_new.open(QFile::WriteOnly)){
+        qDebug() << "File error!";
         return;
     }
     f_new.write(f_old.read(f_old.size()));
-    f_old.remove();
+    if(!copy){
+        f_old.remove();
+    }
+
 }
 
 void MainWindow::onBtnRemoveImage(){
@@ -597,7 +603,6 @@ QImage drawRectOrCircle(double size, QColor color, QColor background_color){
 }
 //void draw
 bool MainWindow::eventFilter(QObject *obj, QEvent *e){
-    auto t1 = std::chrono::steady_clock::now();
     static const std::vector vec_lbl{ui->lblImage, ui->lblLabel, ui->lblImageLabel};
     if(std::find(vec_lbl.cbegin(), vec_lbl.cend(), obj) != vec_lbl.cend()){
         QLabel *label = (QLabel *)obj;
@@ -628,18 +633,15 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e){
                 double h_factor = double(size.height()) / data_image.height();
                 double w_factor = double(size.width()) / data_image.width();
                 double scale_factor = std::min(h_factor, w_factor);
-                auto size_cursor = 8*scale_factor;
-                QColor color = QColor(0,255,255,100);
+                auto size_cursor = 10*scale_factor;
+                QColor color = QColor(0,255,255,128);
                 if(lblHovering == label){
                     size_cursor = size_pencil*scale_factor;
-                    size_cursor = std::max(3.0, size_cursor);
-                    color = QColor(255,255,0,128);
+                    size_cursor = std::max(6.0, size_cursor);
+                    color = QColor(255,255,0,255);
                 }
                 scale_factor = std::max(1.0,scale_factor);
                 auto pos_cursor = lblHovering->mapFromGlobal(QCursor().pos());
-                qDebug() << "paint on "  << label->objectName()
-                        << QCursor().pos() << "to" << pos_cursor;
-//                qDebug() << pos_cursor;
                 drawRectOrCircle(pixmap, pos_cursor, size_cursor, color);
             }
 
@@ -729,7 +731,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e){
                 funcDraw();
             }
 
-            auto t2 = std::chrono::steady_clock::now();
+
 //            qDebug() << "time: " << std::chrono::duration_cast<std::chrono::microseconds>(t2-t1).count();
             updateImageView();
             return true;
@@ -776,6 +778,33 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e){
         return true;
     }
     return false;
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event){
+    if(pathDir==""){
+        return;
+    }
+    if(event->mimeData()->hasUrls()){
+        event->acceptProposedAction();
+    }
+}
+
+void MainWindow::dropEvent(QDropEvent *event){
+    for(auto& url:event->mimeData()->urls()){
+        if(!url.isLocalFile()){
+            continue;
+        }
+        auto path = url.toString(QUrl::PreferLocalFile);
+        QImage image(path);
+        if(image.isNull()){
+
+            continue;
+        }
+        auto name = url.fileName();
+        auto new_path = pathDir + "/" + nameDirImage + "/" + name;
+        moveFile(path, new_path, true);
+    }
+    updateListWidget();
 }
 
 MainWindow::~MainWindow()
