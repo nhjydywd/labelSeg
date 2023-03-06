@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 
 {
+
     ui->setupUi(this);
 
     // 加载所有网络模型
@@ -101,6 +102,7 @@ MainWindow::MainWindow(QWidget *parent)
     for(auto x:ui->centralwidget->findChildren<QSlider*>()){
         x->installEventFilter(this);
     }
+    ui->listWidget->installEventFilter(this);
 
 //    for(auto c:ui->centralwidget->children()){
 //        c->installEventFilter(this);
@@ -287,7 +289,7 @@ void MainWindow::updateImageView(bool must){
     mat_image = mat_image * (1-transparency_image);
 
     cv::Mat mat_label(data_label.height(), data_label.width(),  CV_8UC4);
-    std::memcpy(mat_label.data, data_label.bits(), data_image.sizeInBytes());
+    std::memcpy(mat_label.data, data_label.bits(), data_label.sizeInBytes());
     cv::cvtColor(mat_label * (1-transparency_label), mat_label, cv::COLOR_BGRA2GRAY);
 //    qDebug() << "mat created!";
 
@@ -312,8 +314,17 @@ void MainWindow::updateImageView(bool must){
 
 }
 
+QImage drawRectOrCircle(double size, QColor color, QColor background_color);
 void MainWindow::updateCursor(){
-
+    if(lblHovering==nullptr || lblHovering->pixmap().isNull()){
+        setCursor(Qt::ArrowCursor);
+        return;
+    }
+    else{
+        QPixmap pixmap(1,1);
+        pixmap.fill(QColor(0,0,0,0));
+        setCursor(QCursor(pixmap));
+    }
 }
 
 //void MainWindow::saveLabel(){
@@ -361,7 +372,44 @@ void MainWindow::onBtnWipe(){
 }
 
 void MainWindow::onBtnAutoLabel(){
+    if(data_image.isNull()){
+        return;
+    }
+    const QAction *selectedModel = nullptr;
+    for(const auto *a:ui->menuModels->actions()){
+        if(a->isChecked()){
+            selectedModel = a;
+            break;
+        }
+    }
+    if(selectedModel == nullptr){
+        return;
+    }
+    backupLabel();
+    cv::Mat mat_image(data_image.height(), data_image.width(),  CV_8UC4);
+    qDebug() << mat_image.dims;
+    std::memcpy(mat_image.data, data_image.bits(), data_image.sizeInBytes());
+    cv::cvtColor(mat_image, mat_image, cv::COLOR_BGRA2GRAY);
+    auto &net = nets[selectedModel->text()];
 
+    auto blob = cv::dnn::dnn4_v20220524::blobFromImage(mat_image, 1.0/255);
+
+
+
+    net.setInput(blob);
+    auto pred = net.forward();
+
+    cv::Mat mat_label = pred.reshape(1,mat_image.rows) * 255;
+    mat_label.convertTo(mat_label, CV_8UC1);
+
+
+    cv::threshold(mat_label, mat_label, 10, 255,cv::THRESH_BINARY);
+
+    cv::cvtColor(mat_label, mat_label, cv::COLOR_GRAY2BGRA);
+
+
+    memcpy(data_label.bits(), mat_label.data, data_label.sizeInBytes());
+    updateImageView(true);
 }
 
 void MainWindow::onBtnReset(){
@@ -523,17 +571,29 @@ void MainWindow::onItemSelectionChanged(){
     updateImageView(true);
 }
 
-void drawRectOrCircle(QImage& image, QPointF center, double size, QColor color){
+
+
+void drawRectOrCircle(QPaintDevice& image, QPointF center, double size, QColor color){
     QPainter painter(&image);
     QBrush brush(color);
     painter.setBrush(brush);
-    painter.setPen(color);
+
     if(size <= 3){
-        QRectF rect(center,QSizeF(size, size));
+        QPointF lefttop = QPointF(center.x()-size/2,center.y()-size/2);
+        QRectF rect(lefttop, QSizeF(size/2, size/2));
+        painter.setPen(color);
         painter.drawRect(rect);
     }else{
+        painter.setPen(QColor(0,0,0,0));
         painter.drawEllipse(center,size/2, size/2);
     }
+}
+
+QImage drawRectOrCircle(double size, QColor color, QColor background_color){
+    QImage image(QSizeF(size+5,size+5).toSize(), QImage::Format_RGBA8888);
+    image.fill(background_color);
+    drawRectOrCircle(image, QPointF(image.width()/2.0, image.height()/2.0), size, color);
+    return image;
 }
 //void draw
 bool MainWindow::eventFilter(QObject *obj, QEvent *e){
@@ -541,22 +601,58 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e){
     static const std::vector vec_lbl{ui->lblImage, ui->lblLabel, ui->lblImageLabel};
     if(std::find(vec_lbl.cbegin(), vec_lbl.cend(), obj) != vec_lbl.cend()){
         QLabel *label = (QLabel *)obj;
-
         static QPointF lastDrawPos = QPoint();
         static QLabel *lastDrawLabel = nullptr;
+        if(e->type() == QMouseEvent::Enter){
+            lblHovering = label;
+            updateCursor();
+        }
+        else if(e->type() == QMouseEvent::Leave){
+            lblHovering = nullptr;
+            lastDrawLabel = nullptr;
+            updateCursor();
+        }
+        if(e->type() == QEvent::Paint){
+            if(label->pixmap().isNull()){
+                return true;
+            }
+            //绘制图片
+            const int width_border = 1;
+            QSize size = QSize(label->width() - 2*width_border, label->height() - 2*width_border);
+            if(size.width() <= 0 || size.height() <= 0){
+                return true;
+            }
+            QPixmap pixmap = label->pixmap().scaled(label->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            //绘制鼠标
+            if(lblHovering != nullptr){
+                double h_factor = double(size.height()) / data_image.height();
+                double w_factor = double(size.width()) / data_image.width();
+                double scale_factor = std::min(h_factor, w_factor);
+                auto size_cursor = 8*scale_factor;
+                QColor color = QColor(0,255,255,100);
+                if(lblHovering == label){
+                    size_cursor = size_pencil*scale_factor;
+                    size_cursor = std::max(3.0, size_cursor);
+                    color = QColor(255,255,0,128);
+                }
+                scale_factor = std::max(1.0,scale_factor);
+                auto pos_cursor = lblHovering->mapFromGlobal(QCursor().pos());
+                qDebug() << "paint on "  << label->objectName()
+                        << QCursor().pos() << "to" << pos_cursor;
+//                qDebug() << pos_cursor;
+                drawRectOrCircle(pixmap, pos_cursor, size_cursor, color);
+            }
+
+            QPainter painter(label);
+            painter.drawPixmap(QPointF(width_border, width_border),pixmap);
+
+            return true;
+        }
         QMouseEvent *me = dynamic_cast<QMouseEvent *>(e);
         if(me != nullptr){
-
-            if(me->type() == QMouseEvent::Enter){
-                lblHovering = label;
-                updateCursor();
-            }
-            else if(me->type() == QMouseEvent::Leave){
-                lblHovering = nullptr;
-                lastDrawLabel = nullptr;
-                updateCursor();
-            }
-            else if(me->type() == QMouseEvent::MouseButtonPress){
+//            label->repaint();
+            //以下属于绘制事件响应
+            if(me->type() == QMouseEvent::MouseButtonPress){
                 backupLabel();
             }
             int drawValue = -1;
@@ -568,9 +664,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e){
             }
             if(drawValue == -1){
                 lastDrawLabel = nullptr;
-                return false;
+                // 重绘label，更新鼠标位置
+                for(auto l:{ui->lblImageLabel, ui->lblImage, ui->lblLabel}){
+                    l->repaint();
+                }
+                return true;
             }
-
             auto pos = me->position();
             int size = size_pencil;
             auto funcDraw = [drawValue, this, pos, label, size]{
@@ -626,8 +725,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e){
 //                q_tasks.push(funcDraw);
 //                cond_task.notify_one();
 //            }
+            if(drawValue >= 0){
+                funcDraw();
+            }
 
-            funcDraw();
             auto t2 = std::chrono::steady_clock::now();
 //            qDebug() << "time: " << std::chrono::duration_cast<std::chrono::microseconds>(t2-t1).count();
             updateImageView();
@@ -646,15 +747,16 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e){
         return true;
     }
     if(e->type() == QEvent::KeyPress){
-        qDebug() << "key captured!";
         QKeyEvent* ke = (QKeyEvent*)e;
         // I键和K键调整笔刷大小
         auto value_per_size = double(ui->sldPencilSize->maximum()) / max_size_pencil;
         if(ke->key() == Qt::Key_I){
             ui->sldPencilSize->setValue(ui->sldPencilSize->value() + value_per_size);
+            updateCursor();
         }
         else if(ke->key() == Qt::Key_K){
             ui->sldPencilSize->setValue(ui->sldPencilSize->value() - value_per_size);
+            updateCursor();
         }
         else if(ke->key() == Qt::Key_Up){
             onBtnPrevious();
