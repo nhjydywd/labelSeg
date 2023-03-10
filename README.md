@@ -1,39 +1,45 @@
 # labelSeg
 
 #### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
 
-#### 软件架构
-软件架构说明
+labelSeg是一个针对语义分割的标注工具，旨在通过自动标注和少量的手动矫正，在得到高质量标注图的同时大幅度减少标注所需的时间。自动标注是通过一个预标注的卷积神经网络完成的。
 
+目前，软件只支持对二分类的语义分割进行标注（即0-1标签）。
+
+支持中英双语，可以在菜单栏进行切换。
+
+标注流程：打开图片后，点击右下角的“自动标注”按钮，产生一张初步的自动标注（如下图）。可以使用鼠标作为画笔在标注图上进行修改和矫正，左键绘制，右键擦除。
+
+![输入图片说明](example.png)
+
+快捷键：
+CTRL+S: 保存
+CTRL+Z: 撤回
+I: 增加笔刷大小
+J: 减小笔刷大小
+↑: 上一张图片
+↓: 下一张图片
+滚轮上: 上一张图片
+滚轮下: 下一张图片
+
+#### 依赖库
+Qt 6.4
+OpenCV 4
 
 #### 安装教程
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+1.  使用Qt Creator打开项目
 
-#### 使用说明
+2.  将CMakeLists.txt中，
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```
+set(OpenCV_DIR C:/Libs/Opencv4/opencv/build/x64/vc15/lib)
+```
+替换为
+```
+set(OpenCV_DIR YOUR_OPENCV_PATH)
+```
 
-#### 参与贡献
-
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+3.  以Release模式编译运行
 
 
-#### 特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
