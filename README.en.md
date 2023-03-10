@@ -1,36 +1,69 @@
 # labelSeg
 
 #### Description
-{**When you're done, you can delete the content in this README and update the file with details for others getting started with your repository**}
 
-#### Software Architecture
-Software architecture description
+LabelSeg is a annotation tool for semantic segmentation, which aims to greatly reduce the time required for annotation while obtaining high-quality annotation images through automatic annotation and a small amount of manual correction. Automatic labeling is accomplished through a trained convolution neural network.
 
-#### Installation
+At present, the software only supports the annotation of semantic segmentation of two categories (i.e. 0-1 label).
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+It supports both Chinese and English, and can be switched in the menu bar.
 
-#### Instructions
+Labeling process: After opening the picture, click the "Auto Labeling" button in the lower right corner to generate a preliminary automatic labeling (as shown below). You can use the mouse as a paintbrush to modify and correct on the annotation map, draw with the left button, and erase with the right button.
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+![输入图片说明](example.png)
 
-#### Contribution
+Shortcut keys：
 
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
+CTRL+S: Save
+
+CTRL+Z: Withdraw
+
+I: Increase brush size
+
+K: Reduce brush size
+
+↑: Previous picture
+
+↓: Next picture
+
+Wheel Up: Previous picture
+
+Wheel Down: Next picture
 
 
-#### Gitee Feature
 
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+
+#### Neural network model
+
+Automatic labeling is accomplished through a trained convolution neural network. The default model is' OCTA_ FRNet ', which is a vascular segmentation model for OCTA images.
+
+If you need to use your own model, please export it to the onnx format, and then import the onnx file into the '/models' path of the project's resource file.
+
+
+
+####Dependency
+
+Qt 6.4
+
+OpenCV 4
+
+
+
+#### Run
+
+1.  Open the project using Qt Creator
+
+2.  In CMakeLists.txt, replace
+
+```
+set(OpenCV_DIR C:/Libs/Opencv4/opencv/build/x64/vc15/lib)
+```
+to
+```
+set(OpenCV_DIR YOUR_OPENCV_PATH)
+```
+
+3. Compile and run in Release mode
+
+
+
